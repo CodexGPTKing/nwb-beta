@@ -133,6 +133,124 @@
       color: var(--muted); font-size: 14px;
     }
 
+    .notes-block{
+      margin: 20px 0 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(148,163,184,0.12);
+    }
+    .note-add-btn{
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .note-form{
+      display: none;
+      margin-top: 12px;
+    }
+    .note-form.active{display:block}
+    .note-form textarea{
+      width: 100%;
+      min-height: 110px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.28);
+      background: rgba(148,163,184,0.06);
+      color: var(--text);
+      font: inherit;
+      line-height: 1.5;
+      resize: vertical;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .note-form textarea:focus{
+      outline: 3px solid var(--ring);
+      outline-offset: 2px;
+      border-color: transparent;
+    }
+    .note-form-actions{
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .note-list{
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .note-item{
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.18);
+      background: linear-gradient(180deg, rgba(148,163,184,0.08), rgba(148,163,184,0.03));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .note-meta{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .note-body{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note-menu{position:relative; flex:0 0 auto;}
+    .note-menu-trigger{
+      appearance: none;
+      border: 1px solid transparent;
+      background: rgba(148,163,184,0.08);
+      color: var(--muted);
+      border-radius: 999px;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: background .2s ease, color .2s ease;
+    }
+    .note-menu-trigger:hover{background: rgba(148,163,184,0.14); color: var(--text);}
+    .note-menu-trigger:focus-visible{outline: 3px solid var(--ring); outline-offset: 2px;}
+    .note-menu-pop{
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      min-width: 148px;
+      padding: 6px 0;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.28);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 30;
+    }
+    .note-menu.open .note-menu-pop{display:block}
+    .note-action{
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      text-align: left;
+      font: inherit;
+      font-size: 14px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+    .note-action:hover{background: rgba(148,163,184,0.12);}
+    .note-empty{
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
     /* sticky quick checklist pills */
     .pill{
       display:inline-block;
@@ -315,29 +433,31 @@
       });
 
       // Expand/Collapse cards
+      const cards = Array.from(document.querySelectorAll('section.card'));
       const expandAllBtn = document.getElementById('expandAll');
       const collapseAllBtn = document.getElementById('collapseAll');
       const resetBtn = document.getElementById('resetChecks');
-      const cards = Array.from(document.querySelectorAll('section.card'));
 
-      expandAllBtn.addEventListener('click', () => {
-        cards.forEach(c => c.style.display = '');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-      collapseAllBtn.addEventListener('click', () => {
-        // Keep header and bottom-line visible
-        cards.forEach((c, idx) => {
-          if(idx > 0) c.style.display = 'none';
+      if(expandAllBtn && collapseAllBtn && resetBtn){
+        expandAllBtn.addEventListener('click', () => {
+          cards.forEach(c => c.style.display = '');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-      resetBtn.addEventListener('click', () => {
-        if(!confirm('Reset all checkboxes?')) return;
-        checks.forEach(cb => {
-          cb.checked = false;
-          localStorage.removeItem(STORAGE_KEY_PREFIX + cb.dataset.id);
+        collapseAllBtn.addEventListener('click', () => {
+          // Keep header and bottom-line visible
+          cards.forEach((c, idx) => {
+            if(idx > 0) c.style.display = 'none';
+          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
-      });
+        resetBtn.addEventListener('click', () => {
+          if(!confirm('Reset all checkboxes?')) return;
+          checks.forEach(cb => {
+            cb.checked = false;
+            localStorage.removeItem(STORAGE_KEY_PREFIX + cb.dataset.id);
+          });
+        });
+      }
 
       // Restore any accidental collapsed via hash navigation
       if(location.hash){
@@ -347,6 +467,310 @@
           target.scrollIntoView({behavior:'smooth'});
         }
       }
+
+      const NOTE_STORAGE_PREFIX = 'nwb-notes-v1:';
+      const isValidNote = note => note && typeof note.id === 'string' && typeof note.text === 'string' && typeof note.createdAt === 'string';
+      const getTimestamp = value => {
+        const time = new Date(value).getTime();
+        return Number.isNaN(time) ? 0 : time;
+      };
+      const normalizeNotes = list => list.filter(isValidNote).sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+      const loadNotes = key => {
+        try{
+          const raw = localStorage.getItem(key);
+          if(!raw) return [];
+          const parsed = JSON.parse(raw);
+          if(Array.isArray(parsed)){
+            return normalizeNotes(parsed);
+          }
+        }catch(err){
+          console.warn('Unable to read notes for', key, err);
+        }
+        return [];
+      };
+      const saveNotes = (key, data) => {
+        const payload = normalizeNotes(Array.isArray(data) ? data : []);
+        if(!payload.length){
+          localStorage.removeItem(key);
+          return;
+        }
+        localStorage.setItem(key, JSON.stringify(payload));
+      };
+      const createNoteId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const dateFormatter = (typeof Intl !== 'undefined' && Intl.DateTimeFormat)
+        ? new Intl.DateTimeFormat([], { dateStyle: 'medium', timeStyle: 'short' })
+        : null;
+      const formatStamp = value => {
+        const date = new Date(value);
+        if(Number.isNaN(date.getTime())) return '';
+        if(dateFormatter){
+          try{
+            return dateFormatter.format(date);
+          }catch(err){
+            return date.toLocaleString();
+          }
+        }
+        return date.toLocaleString();
+      };
+      const closeMenus = (except) => {
+        document.querySelectorAll('.note-menu.open').forEach(menu => {
+          if(menu === except) return;
+          menu.classList.remove('open');
+          const trigger = menu.querySelector('.note-menu-trigger');
+          if(trigger){
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        });
+      };
+
+      document.addEventListener('click', event => {
+        if(!event.target.closest('.note-menu')){
+          closeMenus();
+        }
+      });
+      document.addEventListener('keydown', event => {
+        if(event.key === 'Escape'){
+          closeMenus();
+        }
+      });
+
+      cards.forEach(section => {
+        const sectionId = section.id || section.dataset.noteSection;
+        if(!sectionId) return;
+
+        const notesKey = NOTE_STORAGE_PREFIX + sectionId;
+        let notes = loadNotes(notesKey);
+
+        const notesBlock = document.createElement('div');
+        notesBlock.className = 'notes-block';
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn note-add-btn';
+        addBtn.textContent = 'Add note';
+        addBtn.setAttribute('aria-expanded', 'false');
+        notesBlock.appendChild(addBtn);
+
+        const form = document.createElement('form');
+        form.className = 'note-form';
+        form.setAttribute('novalidate', '');
+
+        const textareaId = `${sectionId}-note-input`;
+        const label = document.createElement('label');
+        label.className = 'sr-only';
+        label.setAttribute('for', textareaId);
+        label.textContent = 'Note';
+
+        const textarea = document.createElement('textarea');
+        textarea.id = textareaId;
+        textarea.placeholder = 'Type a note…';
+        textarea.autocomplete = 'off';
+        textarea.spellcheck = true;
+        textarea.rows = 4;
+
+        const actions = document.createElement('div');
+        actions.className = 'note-form-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn note-cancel';
+        cancelBtn.textContent = 'Cancel';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'submit';
+        saveBtn.className = 'btn btn-accent note-save';
+        saveBtn.textContent = 'Save';
+
+        actions.append(cancelBtn, saveBtn);
+        form.append(label, textarea, actions);
+        notesBlock.appendChild(form);
+
+        const list = document.createElement('div');
+        list.className = 'note-list';
+        notesBlock.appendChild(list);
+
+        section.appendChild(notesBlock);
+
+        let mode = 'create';
+        let editingId = null;
+
+        const ensureFocus = () => {
+          requestAnimationFrame(() => {
+            try{
+              textarea.focus({ preventScroll: true });
+            }catch(err){
+              textarea.focus();
+            }
+            const length = textarea.value.length;
+            try{
+              textarea.setSelectionRange(length, length);
+            }catch(err){
+              // ignore
+            }
+          });
+        };
+
+        const showForm = (nextMode, note) => {
+          mode = nextMode;
+          if(nextMode === 'edit' && note){
+            editingId = note.id;
+            textarea.value = note.text;
+          }else{
+            editingId = null;
+            textarea.value = '';
+          }
+          form.classList.add('active');
+          addBtn.setAttribute('aria-expanded', 'true');
+          ensureFocus();
+        };
+
+        const hideForm = () => {
+          mode = 'create';
+          editingId = null;
+          textarea.value = '';
+          form.classList.remove('active');
+          addBtn.setAttribute('aria-expanded', 'false');
+        };
+
+        const renderNotes = () => {
+          list.innerHTML = '';
+          if(!notes.length){
+            const empty = document.createElement('p');
+            empty.className = 'note-empty';
+            empty.textContent = 'No notes yet.';
+            list.appendChild(empty);
+            return;
+          }
+
+          notes.forEach(note => {
+            const item = document.createElement('article');
+            item.className = 'note-item';
+            item.dataset.noteId = note.id;
+
+            const meta = document.createElement('div');
+            meta.className = 'note-meta';
+
+            const dateEl = document.createElement('span');
+            dateEl.textContent = formatStamp(note.createdAt) || 'Just now';
+            meta.appendChild(dateEl);
+
+            const menuWrapper = document.createElement('div');
+            menuWrapper.className = 'note-menu';
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'note-menu-trigger';
+            trigger.setAttribute('aria-haspopup', 'true');
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.innerHTML = '<span aria-hidden="true">⋯</span><span class="sr-only">Open note actions</span>';
+
+            const menu = document.createElement('div');
+            menu.className = 'note-menu-pop';
+            menu.setAttribute('role', 'menu');
+
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'note-action note-edit';
+            editBtn.setAttribute('role', 'menuitem');
+            editBtn.textContent = 'Edit';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'note-action note-delete';
+            deleteBtn.setAttribute('role', 'menuitem');
+            deleteBtn.textContent = 'Delete';
+
+            menu.append(editBtn, deleteBtn);
+            menuWrapper.append(trigger, menu);
+            meta.appendChild(menuWrapper);
+
+            const body = document.createElement('p');
+            body.className = 'note-body';
+            body.textContent = note.text;
+
+            item.append(meta, body);
+            list.appendChild(item);
+          });
+        };
+
+        addBtn.addEventListener('click', () => {
+          closeMenus();
+          showForm('create');
+        });
+
+        cancelBtn.addEventListener('click', () => {
+          textarea.blur();
+          hideForm();
+          closeMenus();
+        });
+
+        form.addEventListener('submit', event => {
+          event.preventDefault();
+          const rawValue = textarea.value;
+          if(!rawValue.trim()){
+            ensureFocus();
+            return;
+          }
+
+          if(mode === 'edit' && editingId){
+            const idx = notes.findIndex(note => note.id === editingId);
+            if(idx !== -1){
+              notes[idx] = Object.assign({}, notes[idx], { text: rawValue });
+            }
+          }else{
+            const newNote = {
+              id: createNoteId(),
+              text: rawValue,
+              createdAt: new Date().toISOString()
+            };
+            notes.unshift(newNote);
+          }
+
+          notes = normalizeNotes(notes);
+          saveNotes(notesKey, notes);
+          renderNotes();
+          hideForm();
+        });
+
+        list.addEventListener('click', event => {
+          const trigger = event.target.closest('.note-menu-trigger');
+          if(trigger){
+            const container = trigger.closest('.note-menu');
+            if(!container) return;
+            const willOpen = !container.classList.contains('open');
+            closeMenus(willOpen ? container : null);
+            container.classList.toggle('open', willOpen);
+            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            return;
+          }
+
+          const editBtn = event.target.closest('.note-edit');
+          if(editBtn){
+            const noteId = editBtn.closest('.note-item')?.dataset.noteId;
+            if(!noteId) return;
+            const note = notes.find(n => n.id === noteId);
+            if(!note) return;
+            closeMenus();
+            showForm('edit', note);
+            return;
+          }
+
+          const deleteBtn = event.target.closest('.note-delete');
+          if(deleteBtn){
+            const noteId = deleteBtn.closest('.note-item')?.dataset.noteId;
+            if(!noteId) return;
+            closeMenus();
+            if(confirm('Delete this note?')){
+              notes = notes.filter(note => note.id !== noteId);
+              notes = normalizeNotes(notes);
+              saveNotes(notesKey, notes);
+              renderNotes();
+            }
+          }
+        });
+
+        renderNotes();
+      });
     })();
   </script>
 </body>
