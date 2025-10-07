@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@NatureWithBri — TikTok Growth Checklist</title>
+  <meta name="description" content="A single-page, modern, mobile-friendly checklist." />
+  <style>
+    :root{
+      --bg: #0b0b0c;
+      --card: #111214;
+      --text: #e9ecf1;
+      --muted: #a6adbb;
+      --accent: #5eead4; /* teal-ish */
+      --accent-2: #93c5fd; /* soft blue */
+      --ring: rgba(94,234,212,0.35);
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --radius: 16px;
+      --maxw: 900px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f7f7fb;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #4b5563;
+        --accent: #0ea5e9;
+        --accent-2: #06b6d4;
+        --ring: rgba(14,165,233,0.25);
+        --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      }
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,Apple Color Emoji,Segoe UI Emoji}
+    a{color:inherit;text-decoration-color:var(--accent)}
+    .wrap{
+      max-width: var(--maxw);
+      margin: 24px auto 80px auto;
+      padding: 0 18px;
+    }
+    header{
+      background: linear-gradient(135deg, rgba(94,234,212,0.12), rgba(147,197,253,0.12));
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 22px;
+    }
+    header h1{
+      margin:0 0 6px 0;
+      font-size: clamp(22px, 3.2vw, 32px);
+      letter-spacing: 0.2px;
+    }
+    header p{
+      margin:0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .toolbar{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px
+    }
+    .btn{
+      appearance:none;border:1px solid rgba(148,163,184,0.3);
+      background: linear-gradient(180deg, var(--card), rgba(0,0,0,0.03));
+      color:var(--text); padding:8px 12px;border-radius:12px;cursor:pointer;
+      font-weight:600; font-size:14px;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 1px 10px rgba(0,0,0,0.06);
+    }
+    .btn:hover{border-color: rgba(148,163,184,0.55)}
+    .btn:active{transform: translateY(1px)}
+    .btn-accent{border-color: transparent; background: linear-gradient(135deg,var(--accent),var(--accent-2)); color:#03151a}
+
+    .card{
+      background: var(--card);
+      border:1px solid rgba(148,163,184,0.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 18px 4px 18px;
+      margin: 14px 0;
+    }
+
+    h2{
+      font-size: clamp(18px, 2.6vw, 24px);
+      line-height:1.3;
+      margin: 18px 0 8px 0;
+      letter-spacing: .2px;
+    }
+    h3{
+      font-size: clamp(16px, 2.2vw, 20px);
+      margin: 16px 0 6px 0;
+    }
+    p{margin: 10px 0}
+    .bottom-line{
+      border-left:4px solid var(--accent);
+      background: linear-gradient(90deg, rgba(94,234,212,0.08), rgba(147,197,253,0.05));
+      padding:12px 12px 12px 14px;border-radius:12px;
+    }
+    .sep{
+      margin: 10px 0 6px 0;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-align:center;
+      user-select: text;
+    }
+
+    ul.checklist{
+      list-style: none;
+      padding: 6px 0 6px 0;
+      margin: 6px 0 16px 4px;
+    }
+    li.item{
+      display:flex; align-items:flex-start; gap:10px;
+      padding:10px 8px;border-radius:12px;
+      transition: background .2s ease, border-color .2s ease;
+      border:1px dashed transparent;
+    }
+    li.item:hover{background: rgba(148,163,184,0.06); border-color: rgba(148,163,184,0.28)}
+    .chk{
+      margin-top: 4px;
+      width: 20px; height: 20px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .text{
+      flex:1 1 auto; min-width:0;
+    }
+    .text strong{font-weight: 800}
+    .text em{font-style: italic}
+    .note{
+      color: var(--muted); font-size: 14px;
+    }
+
+    /* sticky quick checklist pills */
+    .pill{
+      display:inline-block;
+      border:1px solid rgba(148,163,184,0.3);
+      padding:8px 10px;border-radius:999px;margin:4px 6px 6px 0;
+      background: linear-gradient(180deg, rgba(148,163,184,0.06), rgba(148,163,184,0.02));
+      font-size:14px;
+    }
+
+    /* smooth anchors */
+    html{scroll-behavior:smooth}
+
+    /* focus ring */
+    .chk:focus-visible, .btn:focus-visible{outline: 3px solid var(--ring); outline-offset: 2px; border-radius: 10px;}
+    .sr-only{position:absolute!important; height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+
+    /* responsive spacing */
+    @media (max-width: 600px){
+      .wrap{margin: 14px auto 60px auto}
+      .card{padding:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="card">
+      <h1>Nature With Bri — TikTok Growth Checklist</h1>
+    </header>
+
+    <section class="card" id="seasonal">
+      <h2>🍁 Seasonal realignment (now → fall)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-001" id="cb-001"><label class="text" for="cb-001"><strong>Map summer pillars → fall variants:</strong> turn “beach/marine life” into <em>fall-relevant</em> angles (migration, manatee season, storm ecology, reef prep, coastal conservation in fall).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-002" id="cb-002"><label class="text" for="cb-002"><strong>Seasonal hooks/hashtags:</strong> add timely tags and on-screen text that signal “autumn mode” (but keep them relevant to the clip).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-003" id="cb-003"><label class="text" for="cb-003"><strong>Vibe shift:</strong> warmer color grade, cozier narration, reflective storytelling (“how marine life adapts now”).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-004" id="cb-004"><label class="text" for="cb-004"><strong>Deliverable:</strong> 6–8 posts this month that explicitly tie your niche to October/November.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="niche">
+      <h2>🎯 Hyper-niche sharpening (micro-focus wins)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-005" id="cb-005"><label class="text" for="cb-005"><strong>Define 1–2 micro-niches:</strong> e.g., <em>Florida manatees &amp; care</em>, <em>reef critter myths</em>, <em>dolphin cognition bites</em>.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-006" id="cb-006"><label class="text" for="cb-006"><strong>Seriesify:</strong> 3–5 episode micro-series per micro-niche (“Marine Myth Monday,” “Rescue Files,” “1-Minute Field Notes”).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-007" id="cb-007"><label class="text" for="cb-007"><strong>Single-topic per video:</strong> one claim/question per clip; title card/first subtitle states it bluntly.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-008" id="cb-008"><label class="text" for="cb-008"><strong>Pre-post validation:</strong> search your target keyword on TikTok; if the niche is cold this week, pivot to an adjacent one that’s warm.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="retention">
+      <h2>⏱️ Watch-time &amp; share engineering (algorithm levers)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-009" id="cb-009"><label class="text" for="cb-009"><strong>Length mix:</strong> keep some ultrashorts (&lt;15s) but prioritize <strong>30–60s</strong> clips engineered to hold past <strong>15–20s</strong>.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-010" id="cb-010"><label class="text" for="cb-010"><strong>Hook + foreshadow:</strong> strong 1–2s opener <strong>and</strong> a promise (“At 0:20 you’ll see the wildest manatee trick.”).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-011" id="cb-011"><label class="text" for="cb-011"><strong>Re-hooks every 3–5s:</strong> angle cuts, on-screen fact pops, mini-twists, question beats.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-012" id="cb-012"><label class="text" for="cb-012"><strong>Looping endings:</strong> last shot ties seamlessly to first frame to nudge re-watches.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-013" id="cb-013"><label class="text" for="cb-013"><strong>Share triggers:</strong> myth-busts, <em>wow</em> reveals, practical tips (“send to your beach buddy”), light debate.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-014" id="cb-014"><label class="text" for="cb-014"><strong>Soft call to action:</strong> “Share with someone who loves sea turtles” / “Save to rewatch before your aquarium trip.”</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-015" id="cb-015"><label class="text" for="cb-015">🎯 <strong>Targets:</strong> 3-sec hold ≥ 80%, 20-sec retention ≥ 55% on 30–60s videos, completion rate ≥ 45%, <strong>shares/view ≥ 1.0%</strong>, <strong>saves/view ≥ 1.0%</strong>.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="compliance">
+      <h2>🛡️ Compliance + friction removal (silent throttles)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-016" id="cb-016"><label class="text" for="cb-016"><strong>No off-platform verbiage:</strong> remove “link in bio,” raw URLs, or overt IG/YouTube pushes in captions/on-screen text.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-017" id="cb-017"><label class="text" for="cb-017"><strong>Branded content toggle:</strong> use TikTok’s paid-partnership tools on sponsored content; keep story-first, not ad-first.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-018" id="cb-018"><label class="text" for="cb-018"><strong>Caption audit:</strong> no policy-gray phrasing; add context on sensitive scenes (animal care, rescue) to avoid review holds.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-019" id="cb-019"><label class="text" for="cb-019"><strong>Profile pass:</strong> keep external links only in bio; let content deliver value <em>inside</em> TikTok.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="monetization">
+      <h2>💸 Monetization hygiene (creator fund &amp; sponsored content)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-020" id="cb-020"><label class="text" for="cb-020"><strong>Quality over quantity:</strong> avoid “posting to meet payout.” Stick to your best-in-class cadence.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-021" id="cb-021"><label class="text" for="cb-021"><strong>Option test:</strong> consider 30-day opt-out experiment of the Fund/Creativity Program (quietly) while holding all else constant; compare median views.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-022" id="cb-022"><label class="text" for="cb-022"><strong>&gt;60s “reward-eligible” builds:</strong> craft a weekly 60–90s story with TV-tight pacing (brand-safe, educational) to align with payout incentives <em>without</em> dulling engagement.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-023" id="cb-023"><label class="text" for="cb-023"><strong>Staggered sponsored content:</strong> never back-to-back; buffer each with 2–3 high-love organic posts.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="timing">
+      <h2>🗓️ Audience timing &amp; cadence (context shift)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-024" id="cb-024"><label class="text" for="cb-024"><strong>Analytics check:</strong> pull current follower-active hours; shift posting to <strong>~30–60 min before</strong> new peaks (likely evenings/weekends now).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-025" id="cb-025"><label class="text" for="cb-025"><strong>Cadence experiments:</strong> A/B test (a) daily vs (b) 5×/week, and (c) one 2-post day/weekend; watch per-post medians.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-026" id="cb-026"><label class="text" for="cb-026"><strong>TikTok Stories (blue ring):</strong> 1–2/day behind-the-scenes or teasers to warm followers; reply to a few DMs/comments via Story.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-027" id="cb-027"><label class="text" for="cb-027"><strong>Weekly Live/Q&amp;A:</strong> 20–30 min “Ask a Marine Biologist” / “Tank Check Live” to rekindle loyalty and prime the algorithm with active fans.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="trends">
+      <h2>🧪 Trend usage &amp; originality (avoid tactic fatigue)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-028" id="cb-028"><label class="text" for="cb-028"><strong>Trend audio sparingly:</strong> only when it <em>fits the story</em>; otherwise prioritize <strong>your voice/original sound</strong> or natural audio.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-029" id="cb-029"><label class="text" for="cb-029"><strong>Format innovation:</strong> try POV (“I’m the octopus 👀”), green-screen explainers, split-screen myth tests, stitched viewer questions.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-030" id="cb-030"><label class="text" for="cb-030"><strong>Narrative &gt; fact-dump:</strong> scene→question→reveal→reflection beats; one emotion per clip (wonder, surprise, aww).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-031" id="cb-031"><label class="text" for="cb-031"><strong>TikTok SEO:</strong> include species/common names and “how/why” phrasing in captions &amp; on-screen text; 3–6 precise hashtags.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-032" id="cb-032"><label class="text" for="cb-032"><strong>Accessibility &amp; recency signals:</strong> always add captions (TikTok’s AI captions ok); adopt new features early.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="measurement">
+      <h2>📈 Measurement &amp; diagnostics (no-guesswork loop)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-033" id="cb-033"><label class="text" for="cb-033"><strong>Baseline now:</strong> export last 30 days: views, avg watch time, completion, shares/view, saves/view, comments/view, time-to-1k views.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-034" id="cb-034"><label class="text" for="cb-034"><strong>Tag taxonomy:</strong> label each post by micro-niche, length bucket, hook type, seasonality tag, audio type, time posted, trend/use of new feature.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-035" id="cb-035"><label class="text" for="cb-035"><strong>Weekly review:</strong> median per tag; promote winners, prune losers. Watch <strong>time-to-velocity</strong> (1k/10k thresholds).</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-036" id="cb-036"><label class="text" for="cb-036"><strong>Cohorts:</strong> compare new vs existing followers’ engagement; identify fatigue vs discovery gaps.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-037" id="cb-037"><label class="text" for="cb-037"><strong>Diagnostics flags:</strong> sudden dips after sponsored content, “under review” delays, off-platform mentions—document and remove patterns.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="sprint">
+      <h2>🚀 14-day recovery sprint (tight, test-heavy)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-038" id="cb-038"><label class="text" for="cb-038"><strong>Day 1–2:</strong> analytics pull, compliance sweep, define 2 micro-niches + 2 series each, draft 6 hooks.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-039" id="cb-039"><label class="text" for="cb-039"><strong>Day 3–7:</strong> post 1/day (3 × 30–45s, 2 × 55–75s, 1 × &lt;15s). Each with foreshadow + re-hooks + loop. 2 Stories/day. 1 Live.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-040" id="cb-040"><label class="text" for="cb-040"><strong>Day 8:</strong> review medians; kill bottom 25% hook styles; double down on top series.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-041" id="cb-041"><label class="text" for="cb-041"><strong>Day 9–14:</strong> repeat with best formats; add 1 trend-aligned but on-brand post; test an alternative posting time. Maintain Stories + comment-reply videos.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-042" id="cb-042"><label class="text" for="cb-042"><strong>End of Day 14:</strong> compare to baseline; lock in winning length/series/time; schedule next 30-day plan.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="pitfalls">
+      <h2>⚠️ Pitfalls &amp; how to avoid them</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-043" id="cb-043"><label class="text" for="cb-043"><strong>Over-general clips:</strong> fix with single-topic scripts + explicit hooks.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-044" id="cb-044"><label class="text" for="cb-044"><strong>Chasing every trend:</strong> only trends that enhance your story.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-045" id="cb-045"><label class="text" for="cb-045"><strong>sponsored content clumps:</strong> space them; narrative first, product second.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-046" id="cb-046"><label class="text" for="cb-046"><strong>Invisible throttles:</strong> scrub captions/overlays for off-platform cues.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-047" id="cb-047"><label class="text" for="cb-047"><strong>Retention dips at 6–10s:</strong> insert a mid-clip mini-twist or visual change there.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-048" id="cb-048"><label class="text" for="cb-048"><strong>Stale aesthetics:</strong> refresh color grade, typography, intro cadence monthly.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="reflect">
+      <h2>🔁 Final reflective pass (assumptions check)</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-049" id="cb-049"><label class="text" for="cb-049"><strong>If seasonality were <em>not</em> the driver,</strong> micro-niche and retention fixes still lift discovery.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-050" id="cb-050"><label class="text" for="cb-050"><strong>If Fund had zero effect,</strong> opt-out test will show no change—harmless validation.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-051" id="cb-051"><label class="text" for="cb-051"><strong>If audience timing unchanged,</strong> cadence tests reveal whether fatigue (format) vs context (time) dominates.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-052" id="cb-052"><label class="text" for="cb-052"><strong>If trending-audio helped before,</strong> sparing use + stronger storytelling isolates true lift from noise.</label></li>
+      </ul>
+    </section>
+
+    <section class="card" id="quick">
+      <h2>Quick checklist you can tape to your monitor</h2>
+      <ul class="checklist">
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-053" id="cb-053"><label class="text" for="cb-053">🗓️ Post at follower peak-1h; 5–7×/wk; 1 Live/wk; 2 Stories/day.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-054" id="cb-054"><label class="text" for="cb-054">🎯 One micro-topic per video; sharp hook + foreshadow; re-hook every 3–5s; loop ending.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-055" id="cb-055"><label class="text" for="cb-055">⏱️ Aim: ≥55% at 20s on 30–60s; ≥45% completion; ≥1% shares &amp; saves per view.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-056" id="cb-056"><label class="text" for="cb-056">🛡️ No off-platform pushes in content; proper ad disclosure; policy-safe captions.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-057" id="cb-057"><label class="text" for="cb-057">🧪 Trends only when relevant; more original voice; try a new series/format each week.</label></li>
+        <li class="item"><input class="chk" type="checkbox" data-id="cb-058" id="cb-058"><label class="text" for="cb-058">📊 Tag, track, prune; keep only formats that beat last week’s medians.</label></li>
+      </ul>
+    </section>
+
+  </div>
+
+  <script>
+    (function(){
+      const STORAGE_KEY_PREFIX = 'nwb-checklist-v1:';
+      const checks = Array.from(document.querySelectorAll('input.chk'));
+
+      // Load saved states
+      checks.forEach(cb => {
+        const key = STORAGE_KEY_PREFIX + cb.dataset.id;
+        const saved = localStorage.getItem(key);
+        if(saved === '1'){ cb.checked = true; }
+      });
+
+      // Persist on change
+      checks.forEach(cb => {
+        cb.addEventListener('change', () => {
+          const key = STORAGE_KEY_PREFIX + cb.dataset.id;
+          localStorage.setItem(key, cb.checked ? '1' : '0');
+        });
+      });
+
+      // Expand/Collapse cards
+      const expandAllBtn = document.getElementById('expandAll');
+      const collapseAllBtn = document.getElementById('collapseAll');
+      const resetBtn = document.getElementById('resetChecks');
+      const cards = Array.from(document.querySelectorAll('section.card'));
+
+      expandAllBtn.addEventListener('click', () => {
+        cards.forEach(c => c.style.display = '');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      collapseAllBtn.addEventListener('click', () => {
+        // Keep header and bottom-line visible
+        cards.forEach((c, idx) => {
+          if(idx > 0) c.style.display = 'none';
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      resetBtn.addEventListener('click', () => {
+        if(!confirm('Reset all checkboxes?')) return;
+        checks.forEach(cb => {
+          cb.checked = false;
+          localStorage.removeItem(STORAGE_KEY_PREFIX + cb.dataset.id);
+        });
+      });
+
+      // Restore any accidental collapsed via hash navigation
+      if(location.hash){
+        const target = document.querySelector(location.hash);
+        if(target && target.style.display === 'none'){
+          target.style.display = '';
+          target.scrollIntoView({behavior:'smooth'});
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
