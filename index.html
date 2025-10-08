@@ -49,15 +49,41 @@
       margin-bottom: 22px;
     }
     header h1{
-      margin:0 0 6px 0;
+      margin:0;
       font-size: clamp(22px, 3.2vw, 32px);
       letter-spacing: 0.2px;
     }
-    header p{
-      margin:0;
-      color: var(--muted);
-      font-size: 14px;
+    .header-bar{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      flex-wrap:wrap;
     }
+    .auth-panel{
+      margin-left:auto;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .auth-status{
+      font-size:13px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .auth-status[data-state="success"]{color: var(--accent);}
+    .auth-status[data-state="error"]{color: #f87171;}
+    .btn-apple{
+      background:#0b0b0c;
+      color:#fff;
+      border-color:#0b0b0c;
+      box-shadow:none;
+    }
+    @media (prefers-color-scheme: light){
+      .btn-apple{background:#111214;color:#fff;border-color:#111214;}
+    }
+    .btn-apple:disabled{opacity:0.6;cursor:not-allowed;}
     .toolbar{
       display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px
     }
@@ -277,7 +303,14 @@
 <body>
   <div class="wrap">
     <header class="card">
-      <h1>Nature With Bri — TikTok Growth Checklist</h1>
+      <div class="header-bar">
+        <h1>Nature With Bri — TikTok Growth Checklist</h1>
+        <div class="auth-panel">
+          <span id="auth-status" class="auth-status" data-state="muted">Sign in with Apple to sync</span>
+          <button id="apple-signin-btn" class="btn btn-apple" type="button">Sign in with Apple</button>
+          <button id="apple-signout-btn" class="btn" type="button" hidden>Sign out</button>
+        </div>
+      </div>
     </header>
 
     <section class="card" id="seasonal">
@@ -412,90 +445,47 @@
 
   </div>
 
+
+  <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js"></script>
   <script>
     (function(){
-      const STORAGE_KEY_PREFIX = 'nwb-checklist-v1:';
+      const CLOUDKIT_CONFIG = {
+        // TODO: Replace with your CloudKit container identifier.
+        containerIdentifier: 'iCloud.com.example.checklist',
+        // TODO: Replace with the Web API token generated for the container.
+        apiToken: 'YOUR_WEB_API_TOKEN',
+        // Use 'development' while testing with the development environment.
+        environment: 'production'
+      };
+
+      const createEmptyData = () => ({ checks: {}, notes: {} });
+      const AppState = {
+        signedIn: false,
+        user: null,
+        userRecordName: null,
+        data: createEmptyData()
+      };
+
+      const authStatusEl = document.getElementById('auth-status');
+      const signInBtn = document.getElementById('apple-signin-btn');
+      const signOutBtn = document.getElementById('apple-signout-btn');
+
       const checks = Array.from(document.querySelectorAll('input.chk'));
+      checks.forEach(cb => cb.disabled = true);
 
-      // Load saved states
-      checks.forEach(cb => {
-        const key = STORAGE_KEY_PREFIX + cb.dataset.id;
-        const saved = localStorage.getItem(key);
-        if(saved === '1'){ cb.checked = true; }
-      });
+      const sections = Array.from(document.querySelectorAll('section.card'));
+      const noteControllers = new Map();
 
-      // Persist on change
-      checks.forEach(cb => {
-        cb.addEventListener('change', () => {
-          const key = STORAGE_KEY_PREFIX + cb.dataset.id;
-          localStorage.setItem(key, cb.checked ? '1' : '0');
-        });
-      });
+      let cloudContainer = null;
+      let saveTimer = null;
+      let pendingSave = false;
 
-      // Expand/Collapse cards
-      const cards = Array.from(document.querySelectorAll('section.card'));
-      const expandAllBtn = document.getElementById('expandAll');
-      const collapseAllBtn = document.getElementById('collapseAll');
-      const resetBtn = document.getElementById('resetChecks');
-
-      if(expandAllBtn && collapseAllBtn && resetBtn){
-        expandAllBtn.addEventListener('click', () => {
-          cards.forEach(c => c.style.display = '');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        collapseAllBtn.addEventListener('click', () => {
-          // Keep header and bottom-line visible
-          cards.forEach((c, idx) => {
-            if(idx > 0) c.style.display = 'none';
-          });
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        resetBtn.addEventListener('click', () => {
-          if(!confirm('Reset all checkboxes?')) return;
-          checks.forEach(cb => {
-            cb.checked = false;
-            localStorage.removeItem(STORAGE_KEY_PREFIX + cb.dataset.id);
-          });
-        });
-      }
-
-      // Restore any accidental collapsed via hash navigation
-      if(location.hash){
-        const target = document.querySelector(location.hash);
-        if(target && target.style.display === 'none'){
-          target.style.display = '';
-          target.scrollIntoView({behavior:'smooth'});
-        }
-      }
-
-      const NOTE_STORAGE_PREFIX = 'nwb-notes-v1:';
       const isValidNote = note => note && typeof note.id === 'string' && typeof note.text === 'string' && typeof note.createdAt === 'string';
       const getTimestamp = value => {
         const time = new Date(value).getTime();
         return Number.isNaN(time) ? 0 : time;
       };
       const normalizeNotes = list => list.filter(isValidNote).sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
-      const loadNotes = key => {
-        try{
-          const raw = localStorage.getItem(key);
-          if(!raw) return [];
-          const parsed = JSON.parse(raw);
-          if(Array.isArray(parsed)){
-            return normalizeNotes(parsed);
-          }
-        }catch(err){
-          console.warn('Unable to read notes for', key, err);
-        }
-        return [];
-      };
-      const saveNotes = (key, data) => {
-        const payload = normalizeNotes(Array.isArray(data) ? data : []);
-        if(!payload.length){
-          localStorage.removeItem(key);
-          return;
-        }
-        localStorage.setItem(key, JSON.stringify(payload));
-      };
       const createNoteId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       const dateFormatter = (typeof Intl !== 'undefined' && Intl.DateTimeFormat)
         ? new Intl.DateTimeFormat([], { dateStyle: 'medium', timeStyle: 'short' })
@@ -512,6 +502,65 @@
         }
         return date.toLocaleString();
       };
+
+      const mergeWithDefaults = payload => {
+        const base = createEmptyData();
+        if(payload && typeof payload === 'object'){
+          if(payload.checks && typeof payload.checks === 'object'){
+            Object.keys(payload.checks).forEach(id => {
+              base.checks[id] = payload.checks[id] === true;
+            });
+          }
+          if(payload.notes && typeof payload.notes === 'object'){
+            Object.keys(payload.notes).forEach(sectionId => {
+              const raw = payload.notes[sectionId];
+              if(Array.isArray(raw)){
+                base.notes[sectionId] = normalizeNotes(raw.map(note => Object.assign({}, note)));
+              }
+            });
+          }
+        }
+        return base;
+      };
+
+      const getNotes = sectionId => {
+        const source = AppState.data.notes[sectionId];
+        if(!Array.isArray(source)) return [];
+        return source.map(note => Object.assign({}, note));
+      };
+
+      const setNotes = (sectionId, notes) => {
+        AppState.data.notes[sectionId] = normalizeNotes(Array.isArray(notes) ? notes : []);
+        scheduleSave();
+      };
+
+      const getCheckState = id => AppState.data.checks[id] === true;
+      const setCheckState = (id, checked) => {
+        AppState.data.checks[id] = !!checked;
+        scheduleSave();
+      };
+
+      const renderChecks = () => {
+        checks.forEach(cb => {
+          cb.checked = AppState.signedIn ? getCheckState(cb.dataset.id) : false;
+          cb.disabled = !AppState.signedIn;
+        });
+      };
+
+      const renderAllNotes = () => {
+        noteControllers.forEach(controller => controller.render());
+      };
+
+      const showStatus = (message, state = 'muted') => {
+        if(!authStatusEl) return;
+        authStatusEl.textContent = message;
+        authStatusEl.dataset.state = state;
+      };
+      const showSyncedStatus = () => showStatus('Synced just now', 'success');
+      const showSavingStatus = () => showStatus('Saving…');
+      const showErrorStatus = message => showStatus(message, 'error');
+      const showSignedOutStatus = () => showStatus('Sign in with Apple to sync');
+
       const closeMenus = (except) => {
         document.querySelectorAll('.note-menu.open').forEach(menu => {
           if(menu === except) return;
@@ -534,12 +583,158 @@
         }
       });
 
-      cards.forEach(section => {
+      const createCloudStore = config => {
+        let container = null;
+        let database = null;
+        let initialized = false;
+        let currentRecord = null;
+
+        const ensureConfigured = async () => {
+          if(initialized) return;
+          if(!window.CloudKit){
+            throw new Error('CloudKit JS library not available.');
+          }
+          if(!config || !config.containerIdentifier || !config.apiToken){
+            throw new Error('Missing CloudKit configuration.');
+          }
+          CloudKit.configure({
+            containers: [{
+              containerIdentifier: config.containerIdentifier,
+              apiTokenAuth: {
+                apiToken: config.apiToken,
+                persist: true
+              },
+              environment: config.environment || 'production',
+              auth: {
+                type: CloudKit.AUTHENTICATION_TYPE.APPLE_ID,
+                persist: true
+              }
+            }]
+          });
+          container = CloudKit.getDefaultContainer();
+          database = container.privateCloudDatabase;
+          initialized = true;
+        };
+
+        const load = async userRecordName => {
+          await ensureConfigured();
+          const recordName = `ChecklistData_${userRecordName}`;
+          try{
+            const response = await database.fetchRecords([recordName]);
+            if(response.hasErrors){
+              const unknown = response.errors.every(err => err.ckErrorCode === 'UNKNOWN_ITEM');
+              if(unknown){
+                currentRecord = { recordName, recordType: 'ChecklistData' };
+                return createEmptyData();
+              }
+              throw new Error(response.errors.map(err => err.ckErrorCode).join(','));
+            }
+            const record = response.records[0];
+            if(record){
+              currentRecord = record;
+              const payload = record.fields?.payload?.value;
+              if(payload){
+                try{
+                  const parsed = JSON.parse(payload);
+                  return mergeWithDefaults(parsed);
+                }catch(parseErr){
+                  console.error('Unable to parse saved data', parseErr);
+                }
+              }
+            }
+          }catch(err){
+            currentRecord = { recordName, recordType: 'ChecklistData' };
+            throw err;
+          }
+          return createEmptyData();
+        };
+
+        const save = async (userRecordName, data) => {
+          await ensureConfigured();
+          const payload = JSON.stringify(data);
+          const recordName = currentRecord?.recordName || `ChecklistData_${userRecordName}`;
+          const record = {
+            recordType: 'ChecklistData',
+            recordName,
+            fields: {
+              payload: { value: payload }
+            }
+          };
+          if(currentRecord?.recordChangeTag){
+            record.recordChangeTag = currentRecord.recordChangeTag;
+          }
+          const response = await database.saveRecords([record]);
+          if(response.hasErrors){
+            throw new Error(response.errors.map(err => err.ckErrorCode).join(','));
+          }
+          currentRecord = response.records[0];
+          return currentRecord;
+        };
+
+        return {
+          ensureConfigured,
+          load,
+          save,
+          get container(){ return container; },
+          get ready(){ return initialized && !!container; }
+        };
+      };
+
+      const cloudStore = createCloudStore(CLOUDKIT_CONFIG);
+
+      const persistData = async () => {
+        if(!AppState.signedIn || !pendingSave || !AppState.userRecordName) return;
+        pendingSave = false;
+        try{
+          showSavingStatus();
+          await cloudStore.save(AppState.userRecordName, AppState.data);
+          showSyncedStatus();
+        }catch(err){
+          console.error('Unable to sync changes', err);
+          pendingSave = true;
+          showErrorStatus('Sync failed. Retrying…');
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(() => persistData(), 4000);
+        }
+      };
+
+      const scheduleSave = (delay = 400) => {
+        if(!AppState.signedIn) return;
+        pendingSave = true;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          persistData();
+        }, Math.max(0, delay));
+      };
+
+      const ensureSignedIn = async () => {
+        if(AppState.signedIn) return true;
+        if(!cloudContainer) return false;
+        try{
+          await cloudContainer.showSignInUI();
+        }catch(err){
+          console.error('Sign in cancelled', err);
+          showErrorStatus('Sign in was cancelled.');
+          return false;
+        }
+        return AppState.signedIn;
+      };
+
+      checks.forEach(cb => {
+        cb.addEventListener('change', async () => {
+          if(!AppState.signedIn){
+            cb.checked = false;
+            await ensureSignedIn();
+            return;
+          }
+          setCheckState(cb.dataset.id, cb.checked);
+          renderChecks();
+        });
+      });
+
+      sections.forEach(section => {
         const sectionId = section.id || section.dataset.noteSection;
         if(!sectionId) return;
-
-        const notesKey = NOTE_STORAGE_PREFIX + sectionId;
-        let notes = loadNotes(notesKey);
 
         const notesBlock = document.createElement('div');
         notesBlock.className = 'notes-block';
@@ -611,6 +806,7 @@
         };
 
         const showForm = (nextMode, note) => {
+          if(!AppState.signedIn) return;
           mode = nextMode;
           if(nextMode === 'edit' && note){
             editingId = note.id;
@@ -624,16 +820,29 @@
           ensureFocus();
         };
 
-        const hideForm = () => {
+        const hideForm = (resetOnly) => {
           mode = 'create';
           editingId = null;
-          textarea.value = '';
+          if(!resetOnly){
+            textarea.value = '';
+          }
           form.classList.remove('active');
           addBtn.setAttribute('aria-expanded', 'false');
         };
 
         const renderNotes = () => {
           list.innerHTML = '';
+          const signedIn = AppState.signedIn;
+          addBtn.disabled = !signedIn;
+          if(!signedIn){
+            hideForm(true);
+            const prompt = document.createElement('p');
+            prompt.className = 'note-empty';
+            prompt.textContent = 'Sign in with Apple to add notes.';
+            list.appendChild(prompt);
+            return;
+          }
+          const notes = getNotes(sectionId);
           if(!notes.length){
             const empty = document.createElement('p');
             empty.className = 'note-empty';
@@ -651,6 +860,7 @@
             meta.className = 'note-meta';
 
             const dateEl = document.createElement('span');
+            dateEl.className = 'note-date';
             dateEl.textContent = formatStamp(note.createdAt) || 'Just now';
             meta.appendChild(dateEl);
 
@@ -693,7 +903,8 @@
           });
         };
 
-        addBtn.addEventListener('click', () => {
+        addBtn.addEventListener('click', async () => {
+          if(!(await ensureSignedIn())) return;
           closeMenus();
           showForm('create');
         });
@@ -704,35 +915,39 @@
           closeMenus();
         });
 
-        form.addEventListener('submit', event => {
+        form.addEventListener('submit', async event => {
           event.preventDefault();
+          if(!(await ensureSignedIn())){
+            hideForm();
+            return;
+          }
+
           const rawValue = textarea.value;
           if(!rawValue.trim()){
             ensureFocus();
             return;
           }
 
+          const notes = getNotes(sectionId);
           if(mode === 'edit' && editingId){
             const idx = notes.findIndex(note => note.id === editingId);
             if(idx !== -1){
               notes[idx] = Object.assign({}, notes[idx], { text: rawValue });
             }
           }else{
-            const newNote = {
+            notes.unshift({
               id: createNoteId(),
               text: rawValue,
               createdAt: new Date().toISOString()
-            };
-            notes.unshift(newNote);
+            });
           }
 
-          notes = normalizeNotes(notes);
-          saveNotes(notesKey, notes);
+          setNotes(sectionId, notes);
           renderNotes();
           hideForm();
         });
 
-        list.addEventListener('click', event => {
+        list.addEventListener('click', async event => {
           const trigger = event.target.closest('.note-menu-trigger');
           if(trigger){
             const container = trigger.closest('.note-menu');
@@ -746,8 +961,10 @@
 
           const editBtn = event.target.closest('.note-edit');
           if(editBtn){
+            if(!(await ensureSignedIn())) return;
             const noteId = editBtn.closest('.note-item')?.dataset.noteId;
             if(!noteId) return;
+            const notes = getNotes(sectionId);
             const note = notes.find(n => n.id === noteId);
             if(!note) return;
             closeMenus();
@@ -757,20 +974,127 @@
 
           const deleteBtn = event.target.closest('.note-delete');
           if(deleteBtn){
+            if(!(await ensureSignedIn())) return;
             const noteId = deleteBtn.closest('.note-item')?.dataset.noteId;
             if(!noteId) return;
             closeMenus();
             if(confirm('Delete this note?')){
-              notes = notes.filter(note => note.id !== noteId);
-              notes = normalizeNotes(notes);
-              saveNotes(notesKey, notes);
+              const notes = getNotes(sectionId).filter(note => note.id !== noteId);
+              setNotes(sectionId, notes);
               renderNotes();
             }
           }
         });
 
+        const controller = {
+          render: renderNotes,
+          reset(){
+            hideForm(true);
+            renderNotes();
+          }
+        };
+
+        noteControllers.set(sectionId, controller);
         renderNotes();
       });
+
+      const initAuth = async () => {
+        showSignedOutStatus();
+        if(!signInBtn || !signOutBtn) return;
+        signInBtn.disabled = true;
+
+        try{
+          await cloudStore.ensureConfigured();
+        }catch(err){
+          console.error('Unable to initialise CloudKit', err);
+          showErrorStatus('Sign in unavailable. Update CloudKit config.');
+          return;
+        }
+
+        cloudContainer = cloudStore.container;
+        if(!cloudContainer){
+          showErrorStatus('Sign in unavailable.');
+          return;
+        }
+
+        signInBtn.disabled = false;
+
+        const handleSignedOut = () => {
+          AppState.signedIn = false;
+          AppState.user = null;
+          AppState.userRecordName = null;
+          AppState.data = createEmptyData();
+          pendingSave = false;
+          clearTimeout(saveTimer);
+          renderChecks();
+          noteControllers.forEach(controller => controller.reset());
+          signInBtn.hidden = false;
+          signInBtn.disabled = false;
+          signOutBtn.hidden = true;
+          signOutBtn.disabled = false;
+          showSignedOutStatus();
+        };
+
+        const handleSignedIn = async userInfo => {
+          if(!userInfo || !userInfo.userRecordName) return;
+          AppState.signedIn = true;
+          AppState.user = userInfo;
+          AppState.userRecordName = userInfo.userRecordName;
+          signInBtn.hidden = true;
+          signOutBtn.hidden = false;
+          signOutBtn.disabled = false;
+          showStatus('Loading your data…');
+          try{
+            const data = await cloudStore.load(AppState.userRecordName);
+            AppState.data = mergeWithDefaults(data);
+            renderChecks();
+            renderAllNotes();
+            showSyncedStatus();
+          }catch(err){
+            console.error('Unable to load data', err);
+            AppState.data = createEmptyData();
+            renderChecks();
+            renderAllNotes();
+            showErrorStatus('Unable to load data. Changes retry automatically.');
+          }
+        };
+
+        cloudContainer.setUpAuth()
+          .then(userInfo => {
+            if(userInfo && userInfo.userRecordName){
+              handleSignedIn(userInfo);
+            }else{
+              handleSignedOut();
+            }
+          })
+          .catch(err => {
+            console.error('Auth setup failed', err);
+            showErrorStatus('Sign in unavailable. Refresh to retry.');
+          });
+
+        cloudContainer.whenUserSignsIn().then(handleSignedIn);
+        cloudContainer.whenUserSignsOut().then(handleSignedOut);
+
+        signInBtn.addEventListener('click', () => {
+          if(!cloudContainer) return;
+          cloudContainer.showSignInUI().catch(err => {
+            console.error('Sign in failed', err);
+            showErrorStatus('Sign in was cancelled.');
+          });
+        });
+
+        signOutBtn.addEventListener('click', () => {
+          if(!cloudContainer) return;
+          signOutBtn.disabled = true;
+          cloudContainer.signOut().catch(err => {
+            console.error('Sign out failed', err);
+            signOutBtn.disabled = false;
+          });
+        });
+      };
+
+      renderChecks();
+      initAuth();
     })();
   </script>
 </body>
